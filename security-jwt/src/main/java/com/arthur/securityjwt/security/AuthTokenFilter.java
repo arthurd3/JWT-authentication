@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -40,20 +41,20 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 final String userName = jwtUtil.getUserFromToken(jwt);
                 final UserDetails userDetails =
                         userDetailsService.loadUserByUsername(userName);
-
                 UsernamePasswordAuthenticationToken authenticationToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,
-                                userDetails.getAuthorities()
-                        );
-
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-
+                                userDetails.getAuthorities());
+                authenticationToken.setDetails(new WebAuthenticationDetailsSource()
+                        .buildDetails(request));
+                SecurityContextHolder.getContext()
+                        .setAuthentication(authenticationToken);
             }
-
+        }catch (Exception e){
+            log.error("Cannot set user authentication: {}",e.getMessage());
         }
+        filterChain.doFilter(request, response); // needed for the next filter in the chain
     }
 
     private String parseJwt(final HttpServletRequest request){
